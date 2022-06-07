@@ -2,6 +2,7 @@ package reactive.test;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -23,11 +24,10 @@ public class MonoTest {
         StepVerifier.create(mono)
                 .expectNext(name)
                 .verifyComplete();
-
     }
 
     @Test
-    public void subscriberComsumer() {
+    public void subscriberConsumer() {
         String name = "Soares";
         Mono<String> mono = Mono.just(name).log();
 
@@ -37,11 +37,10 @@ public class MonoTest {
         StepVerifier.create(mono)
                 .expectNext(name)
                 .verifyComplete();
-
     }
 
     @Test
-    public void subscriberComsumerError() {
+    public void subscriberConsumerError() {
         String name = "Soares";
         Mono<String> mono = Mono.just(name)
                 .map(s -> {
@@ -55,5 +54,39 @@ public class MonoTest {
         StepVerifier.create(mono)
                 .expectError(RuntimeException.class)
                 .verify();
+    }
+
+    @Test
+    public void monoSubscriberComnumerComplete() {
+        String name = "Soares";
+        Mono<String> mono = Mono.just(name)
+                .log()
+                .map(String::toUpperCase);
+
+        mono.subscribe(s -> log.info("Value {}", s),
+                Throwable::printStackTrace, () -> log.info("FINISHED"));
+
+        log.info("-----------------------");
+        StepVerifier.create(mono)
+                .expectNext(name.toUpperCase())
+                .verifyComplete();
+    }
+
+    @Test
+    public void monoSubscriberConsumerSubscription() {
+        String name = "Soares";
+        Mono<String> mono = Mono.just(name)
+                .log()
+                .map(String::toUpperCase);
+
+        mono.subscribe(s -> log.info("Value {}", s),
+                Throwable::printStackTrace,
+                () -> log.info("FINISHED"),
+                Subscription::cancel);
+
+        log.info("-----------------------");
+        StepVerifier.create(mono)
+                .expectNext(name.toUpperCase())
+                .verifyComplete();
     }
 }
