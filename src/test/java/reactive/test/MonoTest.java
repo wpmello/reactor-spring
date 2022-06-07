@@ -89,4 +89,26 @@ public class MonoTest {
                 .expectNext(name.toUpperCase())
                 .verifyComplete();
     }
+
+    @Test
+    public void monoDoOnMethods() {
+        String name = "Soares";
+        Mono<Object> mono = Mono.just(name)
+                .log()
+                .map(String::toUpperCase)
+                .doOnSubscribe(subcription -> log.info("Subscribed"))
+                .doOnRequest(longNumber -> log.info("Request Received, starting doing something..."))
+                .doOnNext(s -> log.info("value is here. Executing doNext {}", s))
+                .flatMap(s -> Mono.empty())
+                .doOnNext(s -> log.info("value is here. Executing doNext {}", s))
+                .doOnSuccess(s -> log.info("doOnSuccess executed", s));
+
+        mono.subscribe(s -> log.info("Value {}", s),
+                Throwable::printStackTrace, () -> log.info("FINISHED"));
+//
+//        log.info("-----------------------");
+//        StepVerifier.create(mono)
+//                .expectNext(name.toUpperCase())
+//                .verifyComplete();
+    }
 }
