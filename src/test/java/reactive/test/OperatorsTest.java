@@ -1,5 +1,9 @@
 package reactive.test;
 
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -377,8 +381,52 @@ public class OperatorsTest {
                 .verifyComplete();
     }
 
+    @Test
+    public void zipOperator() {
+        Flux<String> titleFlux = Flux.just("Grand blue", "Baki");
+        Flux<String> studioFlux = Flux.just("Zero-G", "TMS Entertainment");
+        Flux<Integer> episodesFlux = Flux.just(12, 21);
+
+        Flux<Anime> animeFlux = Flux.zip(titleFlux, studioFlux, episodesFlux)
+                .flatMap(tuple -> Flux.just(new Anime(tuple.getT1(), tuple.getT2(), tuple.getT3())));
+
+        StepVerifier
+                .create(animeFlux)
+                .expectSubscription()
+                .expectNext(new Anime("Grand blue", "Zero-G", 12),
+                        new Anime("Baki", "TMS Entertainment", 21))
+                .verifyComplete();
+    }
+
+    @Test
+    public void zipWithOperator() {
+        Flux<String> titleFlux = Flux.just("Grand blue", "Baki");
+        Flux<String> studioFlux = Flux.just("Zero-G", "TMS Entertainment");
+        Flux<Integer> episodesFlux = Flux.just(12, 21);
+
+        Flux<Anime> animeFlux = titleFlux.zipWith(episodesFlux)
+                .flatMap(tuple -> Flux.just(new Anime(tuple.getT1(), null, tuple.getT2())));
+
+        StepVerifier
+                .create(animeFlux)
+                .expectSubscription()
+                .expectNext(new Anime("Grand blue", null, 12),
+                        new Anime("Baki", null, 21))
+                .verifyComplete();
+    }
+
     private Flux<String> findByName(String name) {
         return name.equals("A") ? Flux.just("nameA1", "nameA2").delayElements(Duration.ofMillis(100)) : Flux.just("nameB1", "nameB2");
+    }
+
+    @Getter
+    @ToString
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    class Anime {
+        private String title;
+        private String studio;
+        private int episodes;
     }
 
 }
