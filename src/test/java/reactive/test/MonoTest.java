@@ -7,10 +7,6 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 @Slf4j
-/*
-    Reactive Streams
-    1. As
- */
 public class MonoTest {
 
     @Test
@@ -57,7 +53,7 @@ public class MonoTest {
     }
 
     @Test
-    public void monoSubscriberComnumerComplete() {
+    public void monoSubscriberConsumerComplete() {
         String name = "Soares";
         Mono<String> mono = Mono.just(name)
                 .log()
@@ -105,10 +101,56 @@ public class MonoTest {
 
         mono.subscribe(s -> log.info("Value {}", s),
                 Throwable::printStackTrace, () -> log.info("FINISHED"));
-//
-//        log.info("-----------------------");
-//        StepVerifier.create(mono)
-//                .expectNext(name.toUpperCase())
-//                .verifyComplete();
     }
+
+    @Test
+    public void monoDoOnError() {
+        Mono<Object> error = Mono.error(new IllegalAccessError("Illegal argument exception"))
+                .doOnError(e -> MonoTest.log.error("Error message: {}", e.getMessage()))
+                // esta linha na continua pois finaliza no 'doOnError'
+                .doOnNext(s -> log.info("Executing this doOnNext"))
+                .log();
+
+        error.subscribe();
+        StepVerifier.create(error)
+                .expectError(IllegalAccessError.class)
+                .verify();
+    }
+
+    @Test
+    public void monoDoOnErrorResume() {
+        String name = "Soares";
+        Mono<Object> error = Mono.error(new IllegalAccessError("Illegal argument exception"))
+                .doOnError(e -> MonoTest.log.error("Error message: {}", e.getMessage()))
+                // aplicacao continua por conta do 'onErrorResume'
+                .onErrorResume(s ->{
+                    log.info("Inside Error");
+                    return Mono.just(name);
+                })
+                .log();
+
+        error.subscribe();
+        StepVerifier.create(error)
+                .expectNext(name)
+                .verifyComplete();
+    }
+
+    @Test
+    public void monoDoOnErrorReturn() {
+        String name = "Soares";
+        Mono<Object> error = Mono.error(new IllegalAccessError("Illegal argument exception"))
+                .onErrorReturn("Empty")
+                // aplicacao continua por conta do 'onErrorResume'
+                .onErrorResume(s ->{
+                    log.info("Inside Error");
+                    return Mono.just(name);
+                })
+                .log();
+
+        error.subscribe();
+        StepVerifier.create(error)
+                .expectNext("Empty")
+                .verifyComplete();
+    }
+
 }
