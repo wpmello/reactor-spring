@@ -12,6 +12,7 @@ import reactor.test.StepVerifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 public class OperatorsTest {
@@ -154,5 +155,49 @@ public class OperatorsTest {
                     return true;
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    public void switchEmptyOperator() {
+        Flux<Object> flux = emptyFlux()
+                .switchIfEmpty(Flux.just("not empty anymore"))
+                .log();
+
+        StepVerifier.create(flux)
+                .expectSubscription()
+                .expectNext("not empty anymore")
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    public void deferOperator() throws InterruptedException {
+        Mono<Long> just = Mono.just(System.currentTimeMillis());
+        Mono<Long> defer = Mono.defer(() -> Mono.just(System.currentTimeMillis()));
+
+        just.subscribe(j -> log.info("time {}", j));
+        Thread.sleep(100);
+        just.subscribe(j -> log.info("time {}", j));
+        Thread.sleep(100);
+        just.subscribe(j -> log.info("time {}", j));
+        Thread.sleep(100);
+        just.subscribe(j -> log.info("time {}", j));
+
+
+        defer.subscribe(j -> log.info("time {}", j));
+        Thread.sleep(100);
+        defer.subscribe(j -> log.info("time {}", j));
+        Thread.sleep(100);
+        defer.subscribe(j -> log.info("time {}", j));
+        Thread.sleep(100);
+        defer.subscribe(j -> log.info("time {}", j));
+
+        AtomicLong atomicLong = new AtomicLong();
+        defer.subscribe(atomicLong::set);
+        Assertions.assertTrue(atomicLong.get() > 0);
+    }
+
+    private Flux<Object> emptyFlux() {
+        return Flux.empty();
     }
 }
