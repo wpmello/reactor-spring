@@ -1,13 +1,42 @@
 package reactive.test;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
+import reactor.blockhound.BlockHound;
+import reactor.blockhound.BlockingOperationError;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
+
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class MonoTest {
+
+    @BeforeAll
+    public static void setUp() {
+        BlockHound.install();
+    }
+
+    @Test
+    public void blockHoundWorks() {
+        try {
+            FutureTask<?> task = new FutureTask<>(() -> {
+                Thread.sleep(0);
+                return "";
+            });
+            Schedulers.parallel().schedule(task);
+
+            task.get(10, TimeUnit.SECONDS);
+            Assertions.fail("should fail");
+        } catch (Exception e) {
+            Assertions.assertTrue(e.getCause() instanceof BlockingOperationError);
+        }
+    }
 
     @Test
     public void monoSubscriber() {
@@ -105,15 +134,14 @@ public class MonoTest {
 
     @Test
     public void monoDoOnError() {
-        Mono<Object> error = Mono.error(new IllegalAccessError("Illegal argument exception"))
+        Mono<Object> error = Mono.error(new IllegalArgumentException("Illegal argument exception"))
                 .doOnError(e -> MonoTest.log.error("Error message: {}", e.getMessage()))
                 // esta linha na continua pois finaliza no 'doOnError'
                 .doOnNext(s -> log.info("Executing this doOnNext"))
                 .log();
 
-        error.subscribe();
         StepVerifier.create(error)
-                .expectError(IllegalAccessError.class)
+                .expectError(IllegalArgumentException.class)
                 .verify();
     }
 
@@ -123,7 +151,7 @@ public class MonoTest {
         Mono<Object> error = Mono.error(new IllegalAccessError("Illegal argument exception"))
                 .doOnError(e -> MonoTest.log.error("Error message: {}", e.getMessage()))
                 // aplicacao continua por conta do 'onErrorResume'
-                .onErrorResume(s ->{
+                .onErrorResume(s -> {
                     log.info("Inside Error");
                     return Mono.just(name);
                 })
@@ -141,7 +169,7 @@ public class MonoTest {
         Mono<Object> error = Mono.error(new IllegalAccessError("Illegal argument exception"))
                 .onErrorReturn("Empty")
                 // aplicacao continua por conta do 'onErrorResume'
-                .onErrorResume(s ->{
+                .onErrorResume(s -> {
                     log.info("Inside Error");
                     return Mono.just(name);
                 })
