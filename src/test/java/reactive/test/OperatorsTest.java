@@ -49,4 +49,86 @@ public class OperatorsTest {
                 .expectNext(1,2,3,4)
                 .verifyComplete();
     }
+
+    @Test
+    public void multipleSubscribeOnSingle() {
+        Flux<Integer> flux = Flux.range(1, 4)
+                .subscribeOn(Schedulers.single())
+                .map(i -> {
+                    log.info("Map 1 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .map(i -> {
+                    log.info("Map 2 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                });
+
+        StepVerifier.create(flux)
+                .expectSubscription()
+                .expectNext(1,2,3,4)
+                .verifyComplete();
+    }
+
+    @Test
+    public void multiplePublishOnSingle() {
+        Flux<Integer> flux = Flux.range(1, 4)
+                .publishOn(Schedulers.single())
+                .map(i -> {
+                    log.info("Map 1 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                })
+                .publishOn(Schedulers.boundedElastic())
+                .map(i -> {
+                    log.info("Map 2 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                });
+
+        flux.subscribe();
+        flux.subscribe();
+        StepVerifier.create(flux)
+                .expectSubscription()
+                .expectNext(1,2,3,4)
+                .verifyComplete();
+    }
+
+    @Test
+    public void publishAndSubscribeOnSingle() {
+        Flux<Integer> flux = Flux.range(1, 4)
+                .publishOn(Schedulers.single())
+                .map(i -> {
+                    log.info("Map 1 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .map(i -> {
+                    log.info("Map 2 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                });
+
+        StepVerifier.create(flux)
+                .expectSubscription()
+                .expectNext(1,2,3,4)
+                .verifyComplete();
+    }
+
+    @Test
+    public void subscribeAndPublishOnSingle() {
+        Flux<Integer> flux = Flux.range(1, 4)
+                .subscribeOn(Schedulers.single())
+                .map(i -> {
+                    log.info("Map 1 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                })
+                .publishOn(Schedulers.boundedElastic())
+                .map(i -> {
+                    log.info("Map 2 - Number {} Thread {}", i, Thread.currentThread().getName());
+                    return i;
+                });
+
+        StepVerifier.create(flux)
+                .expectSubscription()
+                .expectNext(1,2,3,4)
+                .verifyComplete();
+    }
 }
